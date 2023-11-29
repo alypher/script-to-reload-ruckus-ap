@@ -1,0 +1,58 @@
+import paramiko
+from time import sleep
+
+# Variables to script
+controller_ip = '192.168.0.2'
+controller_user = 'admin'
+controller_password = 'abacaxi'
+enablePassword = 'abacaxi'
+
+# Class to storage host info
+class Host(): 
+    def __init__(self, mac):
+        self.mac = mac
+
+# Variables for hosts
+hosts = [
+    Host('FC:5C:45:00:53:90'),
+    Host('FC:5C:45:00:53:91'),
+]
+
+def script(host, remote_conn):
+    # Start script on host
+    # use this commands below to reload ap
+    remote_conn.send("reload ap "+getattr(host, 'mac')+"\n")
+    sleep(2)
+    if enablePassword:
+        remote_conn.send(("yes"+"\n"))
+    return
+
+# Start client connection
+client = paramiko.SSHClient()
+client.load_system_host_keys()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect(controller_ip, username=controller_user, password=controller_password, port=22)
+print("connected as {}".format(controller_user))
+sleep(5)
+
+# Start shell to send commands
+remote_conn = client.invoke_shell()
+sleep(10)
+
+if enablePassword:
+    remote_conn.send('enable'+"\n")
+    sleep(2)
+    remote_conn.send(enablePassword+'\n')
+    sleep(2)
+
+for host in hosts:
+    print('\nStarting script on ap:'+getattr(host, 'mac')+"\n")
+    script(host, remote_conn)
+    sleep(2)
+
+# Print output
+output = remote_conn.recv(10000)
+print(output)
+
+# Close connection
+client.close()
